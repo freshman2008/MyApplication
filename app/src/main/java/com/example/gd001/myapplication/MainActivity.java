@@ -8,16 +8,11 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
-
-import net.sqlcipher.database.SQLiteDatabase;
-
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
-    private SQLiteDatabase database;
-
+    private DBHelper dbHelper;
     private DBAdapter adapter;
     private ListView listView;
     private List<Person> personList = new ArrayList<Person>();
@@ -29,13 +24,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        InitializeSQLCipher();
         context = this;
-
         insertBtn = (Button) findViewById(R.id.btn_insert);
         listView = (ListView)findViewById(R.id.person_list);
+        dbHelper = new DBHelper(this);
         personList = queryData();
-        //实例化DbAdapter
         adapter = new DBAdapter(getApplication(), personList);
         listView.setAdapter(adapter);
 
@@ -49,22 +42,12 @@ public class MainActivity extends Activity {
                 values.put("sex", "mail");
 
                 //调用insert插入数据库
-                database.insert("person", null, values);
-                updateUI();
+                dbHelper.insert(values);
+//                updateUI();
+                adapter.refresh(queryData());
             }
         });
     }
-
-    private void InitializeSQLCipher() {
-        SQLiteDatabase.loadLibs(this);
-        File databaseFile = getDatabasePath("demo.db");
-//        databaseFile.mkdirs();
-//        databaseFile.delete();
-        database = SQLiteDatabase.openOrCreateDatabase(databaseFile, "test123", null);
-        database.execSQL("CREATE TABLE IF NOT EXISTS person(_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, age INTEGER, sex TEXT)");
-        database.execSQL("insert into person(name, age, sex) values(?, ?, ?)", new Object[]{"John", 26, "male"});
-    }
-
 
     public void updateUI() {
         this.runOnUiThread(new Runnable() {
@@ -81,7 +64,7 @@ public class MainActivity extends Activity {
         personList.clear();
 
         //调用query()获取Cursor
-        Cursor c = database.query("person", null, null, null, null, null, null, null);
+        Cursor c = dbHelper.query();
         while (c.moveToNext()){
             int _id = c.getInt(c.getColumnIndex("_id"));
             String name = c.getString(c.getColumnIndex("name"));
